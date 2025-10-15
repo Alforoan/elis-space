@@ -1,13 +1,13 @@
-passlib==1.7.4
 fastapi
 uvicorn
 sqlalchemy
 pydantic
 jinja2
 databases
-bcrypt
-openai
+openai>=1.35.0
 textblob
 python-jose[cryptography]
-passlib[bcrypt]
+passlib==1.7.4
+bcrypt==4.1.2
 python-multipart
+python-dotenv
