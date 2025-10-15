@@ -1,0 +1,145 @@
+.notification-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 10000;
+  animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.notification-modal {
+  background: white;
+  border-radius: 20px;
+  padding: 2rem;
+  max-width: 500px;
+  width: 90%;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(50px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.notification-modal-header {
+  text-align: center;
+  margin-bottom: 1.5rem;
+}
+
+.notification-icon {
+  font-size: 4rem;
+  margin-bottom: 1rem;
+  animation: bounce 0.6s ease-in-out;
+}
+
+@keyframes bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.notification-modal-header h2 {
+  color: #667eea;
+  font-size: 1.8rem;
+  margin: 0;
+}
+
+.notification-modal-body {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.notification-modal-body p {
+  color: #475569;
+  font-size: 1.1rem;
+  line-height: 1.6;
+  margin: 0;
+}
+
+.notification-modal-footer {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.notification-btn-primary,
+.notification-btn-secondary {
+  padding: 0.875rem 2rem;
+  border: none;
+  border-radius: 12px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  min-width: 140px;
+}
+
+.notification-btn-primary {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+}
+
+.notification-btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+}
+
+.notification-btn-secondary {
+  background: white;
+  color: #667eea;
+  border: 2px solid #667eea;
+}
+
+.notification-btn-secondary:hover {
+  background: #f8f9ff;
+  transform: translateY(-2px);
+}
+
+@media (max-width: 480px) {
+  .notification-modal {
+    padding: 1.5rem;
+  }
+
+  .notification-modal-header h2 {
+    font-size: 1.5rem;
+  }
+
+  .notification-modal-body p {
+    font-size: 1rem;
+  }
+
+  .notification-modal-footer {
+    flex-direction: column;
+  }
+
+  .notification-btn-primary,
+  .notification-btn-secondary {
+    width: 100%;
+  }
+}

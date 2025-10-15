@@ -2,6 +2,10 @@ import os
 from openai import OpenAI
 from textblob import TextBlob
 import json
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 # the newest OpenAI model is "gpt-5" which was released August 7, 2025.
 # do not change this unless explicitly requested by the user
@@ -72,23 +76,24 @@ Your goal is to create a safe space for emotional expression and self-reflection
         """Generate empathetic response from Eli"""
         try:
             messages = [{"role": "system", "content": self.system_prompt}]
-            
+
             if conversation_history:
                 for entry in conversation_history[-5:]:
                     messages.append({"role": "user", "content": entry.get("user_message", "")})
                     messages.append({"role": "assistant", "content": entry.get("eli_response", "")})
-            
+
             messages.append({"role": "user", "content": user_message})
-            
+
             response = self.client.chat.completions.create(
-                model="gpt-5",
+                model="gpt-4o",
                 messages=messages,
                 max_completion_tokens=200
             )
-            
+
             return response.choices[0].message.content
-        
+
         except Exception as e:
+            print(f"Error in chat: {e}")
             return "I'm here with you. Sometimes I need a moment to gather my thoughts. Could you share that again?"
 
     def generate_daily_summary(self, entries):
@@ -109,7 +114,7 @@ Entries:
 {combined}"""
             
             response = self.client.chat.completions.create(
-                model="gpt-5",
+                model="gpt-4o",
                 messages=[
                     {"role": "system", "content": self.system_prompt},
                     {"role": "user", "content": prompt}
@@ -144,7 +149,7 @@ Sample entries:
 {combined}"""
             
             response = self.client.chat.completions.create(
-                model="gpt-5",
+                model="gpt-4o",
                 messages=[
                     {"role": "system", "content": self.system_prompt},
                     {"role": "user", "content": prompt}

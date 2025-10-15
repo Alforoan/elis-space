@@ -22,14 +22,32 @@ function Chat() {
 
   const loadRecentEntries = async () => {
     try {
-      const response = await axios.get('/api/entries/today')
-      const entries = response.data.map(entry => ({
-        user: entry.user_message,
-        eli: entry.eli_response,
-        sentiment: entry.sentiment_label,
-        tags: entry.mood_tags
-      }))
-      setMessages(entries)
+      const token = localStorage.getItem('token')
+
+      if (token) {
+        // AUTHENTICATED USER: Load from database
+        console.log('🔐 Loading chat messages from database')
+        const response = await axios.get('/api/entries/today')
+        const entries = response.data.map(entry => ({
+          user: entry.user_message,
+          eli: entry.eli_response,
+          sentiment: entry.sentiment_label,
+          tags: entry.mood_tags
+        }))
+        setMessages(entries)
+      } else {
+        // GUEST USER: Load from localStorage
+        console.log('👤 Loading chat messages from localStorage')
+        const cachedMessages = localStorage.getItem('chatMessages')
+        if (cachedMessages) {
+          try {
+            const parsed = JSON.parse(cachedMessages)
+            setMessages(parsed)
+          } catch (error) {
+            console.error('Error parsing cached messages:', error)
+          }
+        }
+      }
     } catch (error) {
       console.error('Error loading entries:', error)
     }
@@ -38,6 +56,7 @@ function Chat() {
   const handleSendMessage = async () => {
     if (!inputValue.trim()) return
 
+    const token = localStorage.getItem('token')
     const userMessage = inputValue
     setInputValue('')
     setIsLoading(true)
@@ -51,26 +70,51 @@ function Chat() {
 
       const { eli_response, sentiment_label, mood_tags } = response.data
 
-      setMessages(prev => [
-        ...prev.slice(0, -1),
-        {
-          user: userMessage,
-          eli: eli_response,
-          sentiment: sentiment_label,
-          tags: mood_tags
+      const newMessage = {
+        user: userMessage,
+        eli: eli_response,
+        sentiment: sentiment_label,
+        tags: mood_tags
+      }
+
+      setMessages(prev => {
+        const updatedMessages = [
+          ...prev.slice(0, -1),
+          newMessage
+        ]
+
+        // GUEST USER: Save to localStorage
+        if (!token) {
+          console.log('👤 Saving chat message to localStorage')
+          localStorage.setItem('chatMessages', JSON.stringify(updatedMessages))
+        } else {
+          console.log('🔐 Chat message saved to database (via API)')
         }
-      ])
+
+        return updatedMessages
+      })
     } catch (error) {
       console.error('Error sending message:', error)
-      setMessages(prev => [
-        ...prev.slice(0, -1),
-        {
-          user: userMessage,
-          eli: "I'm having trouble connecting right now. Please try again.",
-          sentiment: 'neutral',
-          tags: ''
+      const errorMessage = {
+        user: userMessage,
+        eli: "I'm having trouble connecting right now. Please try again.",
+        sentiment: 'neutral',
+        tags: ''
+      }
+
+      setMessages(prev => {
+        const updatedMessages = [
+          ...prev.slice(0, -1),
+          errorMessage
+        ]
+
+        // GUEST USER: Save error message to localStorage too
+        if (!token) {
+          localStorage.setItem('chatMessages', JSON.stringify(updatedMessages))
         }
-      ])
+
+        return updatedMessages
+      })
     } finally {
       setIsLoading(false)
     }
@@ -97,26 +141,26 @@ function Chat() {
         <p>Share how you're feeling. Eli is here to listen.</p>
       </div>
 
-      {messages.length === 0 && (
-        <div className="welcome-message">
-          <h3>Hello, I'm Eli</h3>
-          <p>I'm here to support you during your journey. Feel free to share how you're feeling, what's on your mind, or anything you'd like to talk about. There's no judgment here, just a safe space for you.</p>
-          <div className="quick-prompts">
-            <p>Not sure where to start? Try one of these:</p>
-            {quickPrompts.map((prompt, index) => (
-              <button 
-                key={index}
-                className="quick-prompt-btn"
-                onClick={() => setInputValue(prompt)}
-              >
-                {prompt}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
       <div className="messages-container">
+        {messages.length === 0 && (
+          <div className="welcome-message">
+            <h3>Hello, I'm Eli</h3>
+            <p>I'm here to support you during your journey. Feel free to share how you're feeling, what's on your mind, or anything you'd like to talk about. There's no judgment here, just a safe space for you.</p>
+            <div className="quick-prompts">
+              <p>Not sure where to start? Try one of these:</p>
+              {quickPrompts.map((prompt, index) => (
+                <button
+                  key={index}
+                  className="quick-prompt-btn"
+                  onClick={() => setInputValue(prompt)}
+                >
+                  {prompt}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         {messages.map((msg, index) => (
           <div key={index} className="message-group">
             <div className="message user-message">

@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react'
 import axios from 'axios'
 import '../styles/Settings.css'
+import NotificationModal from '../components/NotificationModal'
 
-function Settings() {
+function Settings({setActiveTab}) {
   const [settings, setSettings] = useState({
     reminder_enabled: true,
     reminder_time: '09:00',
@@ -11,6 +12,7 @@ function Settings() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [saveMessage, setSaveMessage] = useState('')
+  const [showTestModal, setShowTestModal] = useState(false)
 
   useEffect(() => {
     loadSettings()
@@ -33,6 +35,43 @@ function Settings() {
 
     try {
       await axios.put('/api/settings', settings)
+
+      // Log notification schedule info
+      if (settings.reminder_enabled) {
+        const [hours, minutes] = settings.reminder_time.split(':')
+        const now = new Date()
+        const scheduledTime = new Date()
+        scheduledTime.setHours(parseInt(hours), parseInt(minutes), 0, 0)
+
+        const timeUntilReminder = scheduledTime - now
+        const willShowToday = timeUntilReminder > 0
+
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
+        console.log('📅 NOTIFICATION SCHEDULE')
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
+        console.log('⏰ Current time:', now.toLocaleString())
+        console.log('🔔 Reminder scheduled for:', scheduledTime.toLocaleString())
+
+        if (willShowToday) {
+          console.log('⏳ Time until reminder:', Math.floor(timeUntilReminder / 1000 / 60), 'minutes (', Math.floor(timeUntilReminder / 1000), 'seconds )')
+          console.log('📆 Will show TODAY')
+        } else {
+          const tomorrow = new Date(scheduledTime)
+          tomorrow.setDate(tomorrow.getDate() + 1)
+          const timeUntilTomorrow = tomorrow - now
+          console.log('⏳ Time has passed today')
+          console.log('📆 Will show TOMORROW at:', tomorrow.toLocaleString())
+          console.log('⏳ Time until tomorrow:', Math.floor(timeUntilTomorrow / 1000 / 60), 'minutes')
+        }
+
+        console.log('✅ Reminder enabled:', settings.reminder_enabled)
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
+      } else {
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
+        console.log('🔕 Reminders are DISABLED')
+        console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
+      }
+
       setSaveMessage('Settings saved successfully!')
       setTimeout(() => setSaveMessage(''), 3000)
     } catch (error) {
@@ -77,9 +116,9 @@ function Settings() {
         <div className="setting-item">
           <div className="setting-info">
             <label>Daily Check-in Reminders</label>
-            <p className="setting-description">Get a gentle reminder to check in with Eli</p>
+            <p className="setting-description">Get a modal reminder to check in with Eli</p>
           </div>
-          <button 
+          <button
             className={`toggle-btn ${settings.reminder_enabled ? 'active' : ''}`}
             onClick={() => handleToggle('reminder_enabled')}
           >
@@ -88,18 +127,36 @@ function Settings() {
         </div>
 
         {settings.reminder_enabled && (
-          <div className="setting-item">
-            <div className="setting-info">
-              <label>Reminder Time</label>
-              <p className="setting-description">When would you like to be reminded?</p>
+          <>
+            <div className="setting-item">
+              <div className="setting-info">
+                <label>Reminder Time</label>
+                <p className="setting-description">When would you like to be reminded?</p>
+              </div>
+              <input
+                type="time"
+                value={settings.reminder_time}
+                onChange={handleTimeChange}
+                className="time-input"
+              />
             </div>
-            <input 
-              type="time" 
-              value={settings.reminder_time}
-              onChange={handleTimeChange}
-              className="time-input"
-            />
-          </div>
+            <div className="setting-item">
+              <div className="setting-info">
+                <label>Test Reminder</label>
+                <p className="setting-description">Preview the reminder modal</p>
+              </div>
+              <button
+                className="test-notification-btn"
+                onClick={() => {
+                  setShowTestModal(true)
+                  setSaveMessage('Modal opened!')
+                  setTimeout(() => setSaveMessage(''), 2000)
+                }}
+              >
+                Test Modal
+              </button>
+            </div>
+          </>
         )}
       </div>
 
@@ -122,8 +179,9 @@ function Settings() {
       <div className="settings-section">
         <h3>About</h3>
         <div className="about-content">
-          <p>Mood Tracker helps you reflect on and manage your emotions through conversations with Eli, your supportive AI companion.</p>
+          <p>Eli's Space helps you reflect on and manage your emotions through conversations with Eli, your supportive AI companion.</p>
           <p>Your data is stored locally and privately. Conversations with Eli use AI to provide empathetic responses and detect emotional patterns.</p>
+          <p className="disclaimer"><strong>Important:</strong> Eli is an AI companion and is not a substitute for professional mental health care. If you are experiencing a mental health crisis or need professional support, please contact a licensed therapist, counselor, or crisis helpline.</p>
         </div>
       </div>
 
@@ -141,6 +199,14 @@ function Settings() {
           </div>
         )}
       </div>
+
+      <NotificationModal
+        isOpen={showTestModal}
+        onClose={() => setShowTestModal(false)}
+        setActiveTab={setActiveTab}
+        title="Time to check in with Eli 💙"
+        message="How are you feeling today? Take a moment to reflect and share with Eli."
+      />
     </div>
   )
 }

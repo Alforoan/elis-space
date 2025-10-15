@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(tasklist:*)",
+      "Bash(findstr:*)",
+      "Bash(python:*)",
+      "Bash(taskkill:*)",
+      "Bash(del mood_tracker.db)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

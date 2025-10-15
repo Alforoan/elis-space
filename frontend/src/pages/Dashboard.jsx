@@ -8,14 +8,55 @@ function Dashboard() {
   const [entries, setEntries] = useState([])
   const [dailySummary, setDailySummary] = useState(null)
   const [weeklySummary, setWeeklySummary] = useState(null)
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(false)
 
   useEffect(() => {
+    const token = localStorage.getItem('token')
+
+    // If authenticated, immediately clear any cached data and DON'T load from cache
+    if (token) {
+      console.log('User is authenticated - clearing any cached data, will only load from API')
+      localStorage.removeItem('dashboardData')
+      // For authenticated users, always show loading while fetching
+      setLoading(true)
+      // Don't set any state from cache - only from API
+    } else {
+      // Only load cached data for guest users (no token)
+      const cachedData = localStorage.getItem('dashboardData')
+      if (cachedData) {
+        try {
+          console.log('Loading cached guest data')
+          const parsed = JSON.parse(cachedData)
+          // Only set state if still not authenticated (double check)
+          if (!localStorage.getItem('token')) {
+            setStats(parsed.stats)
+            setEntries(parsed.entries)
+            setDailySummary(parsed.dailySummary)
+            setWeeklySummary(parsed.weeklySummary)
+          }
+        } catch (error) {
+          console.error('Error loading cached dashboard data:', error)
+        }
+      } else {
+        // Only show loading if there's no cached data
+        setLoading(true)
+      }
+    }
+
+    // Fetch fresh data from API (filtered by user_id for authenticated users)
     loadDashboardData()
   }, [])
 
   const loadDashboardData = async () => {
     try {
+      // Check token status BEFORE making API calls
+      const token = localStorage.getItem('token')
+
+      console.log('📊 DASHBOARD: Loading data...', {
+        authenticated: !!token,
+        timestamp: new Date().toLocaleString()
+      })
+
       const [statsRes, entriesRes, dailyRes, weeklyRes] = await Promise.all([
         axios.get('/api/stats/overview'),
         axios.get('/api/entries?days=7'),
@@ -23,13 +64,40 @@ function Dashboard() {
         axios.get('/api/summary/weekly')
       ])
 
-      setStats(statsRes.data)
-      setEntries(entriesRes.data)
-      setDailySummary(dailyRes.data)
-      setWeeklySummary(weeklyRes.data)
+      const freshData = {
+        stats: statsRes.data,
+        entries: entriesRes.data,
+        dailySummary: dailyRes.data,
+        weeklySummary: weeklyRes.data
+      }
+
+      console.log('📊 DASHBOARD: Data received from database:', {
+        authenticated: !!token,
+        stats: freshData.stats,
+        entriesCount: freshData.entries.length,
+        entries: freshData.entries,
+        dailySummary: freshData.dailySummary,
+        weeklySummary: freshData.weeklySummary
+      })
+
+      // Update state with fresh data
+      setStats(freshData.stats)
+      setEntries(freshData.entries)
+      setDailySummary(freshData.dailySummary)
+      setWeeklySummary(freshData.weeklySummary)
       setLoading(false)
+
+      // Only cache data for guest users (check again to be safe)
+      if (!token && !localStorage.getItem('token')) {
+        console.log('💾 DASHBOARD: Caching guest data to localStorage')
+        localStorage.setItem('dashboardData', JSON.stringify(freshData))
+      } else {
+        console.log('🔐 DASHBOARD: Authenticated user - NOT caching to localStorage')
+        // Ensure no cached data exists for authenticated users
+        localStorage.removeItem('dashboardData')
+      }
     } catch (error) {
-      console.error('Error loading dashboard data:', error)
+      console.error('❌ DASHBOARD: Error loading dashboard data:', error)
       setLoading(false)
     }
   }
