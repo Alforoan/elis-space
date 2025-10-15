@@ -4,6 +4,7 @@ sqlalchemy
 pydantic
 jinja2
 databases
+bcrypt
 openai
 textblob
 python-jose[cryptography]
