@@ -27,25 +27,23 @@ function Home({ setActiveTab }) {
     const token = localStorage.getItem('token')
 
     if (token) {
-      // AUTHENTICATED USER: Clear cache, DON'T load from localStorage
-      console.log('🔐 AUTHENTICATED USER - Will ONLY load from database API')
+      // AUTHENTICATED USER: Clear cache, NEVER load from localStorage
+      console.log('🔐 Authenticated user - will ONLY load from database')
       localStorage.removeItem('dashboardData')
-      // State remains empty until API response arrives
+      // State remains empty until API response arrives from database
     } else {
-      // GUEST USER: Load from cache if available
-      console.log('👤 GUEST USER - Loading from cache (if available) and API')
+      // GUEST USER: Load from cache if available for temporary storage
+      console.log('👤 Guest user - checking for cached data')
       const cachedData = localStorage.getItem('dashboardData')
       if (cachedData) {
         try {
           const parsed = JSON.parse(cachedData)
-          // Triple check: only set state if STILL no token
+          // Double check: only use cache if still not authenticated
           if (!localStorage.getItem('token')) {
-            console.log('  ✓ Loading cached data into state')
+            console.log('👤 Loading cached guest data')
             setStats(parsed.stats)
             setEntries(parsed.entries)
             setWeeklySummary(parsed.weeklySummary)
-          } else {
-            console.log('  ✗ Token detected, skipping cache')
           }
         } catch (error) {
           console.error('Error loading cached data:', error)
@@ -53,17 +51,20 @@ function Home({ setActiveTab }) {
       }
     }
 
-    // Fetch fresh data from API (filtered by user_id for authenticated users)
+    // Always fetch fresh data from API (database for authenticated, filtered by user_id)
     loadHomeData()
   }, [])
 
   const loadHomeData = async () => {
     try {
-      // Check token status BEFORE making API calls
       const token = localStorage.getItem('token')
 
-      console.log(`📡 Fetching data from API... (authenticated: ${!!token})`)
+      console.log('📡 HOME: Loading data from database...', {
+        authenticated: !!token,
+        timestamp: new Date().toLocaleString()
+      })
 
+      // Fetch data from database (backend filters by user_id for authenticated users)
       const [statsRes, entriesRes, weeklyRes] = await Promise.all([
         axios.get('/api/stats/overview'),
         axios.get('/api/entries?days=7'),
@@ -76,24 +77,26 @@ function Home({ setActiveTab }) {
         weeklySummary: weeklyRes.data
       }
 
-      console.log(`✓ API data received: ${data.entries.length} entries`)
+      console.log('📡 HOME: Data received from database:', {
+        authenticated: !!token,
+        entriesCount: data.entries.length
+      })
 
-      // Set state from API response
+      // Update state with fresh data from database
       setStats(data.stats)
       setEntries(data.entries)
       setWeeklySummary(data.weeklySummary)
 
-      // Cache handling
+      // GUEST USER ONLY: Cache data to localStorage for temporary storage
       if (!token && !localStorage.getItem('token')) {
-        console.log('💾 GUEST: Caching data to localStorage')
+        console.log('💾 Guest user - caching data to localStorage')
         localStorage.setItem('dashboardData', JSON.stringify(data))
       } else {
-        console.log('🔐 AUTHENTICATED: NOT caching to localStorage (database is source of truth)')
-        // Ensure no cached data exists for authenticated users
+        console.log('🔐 Authenticated user - NOT caching to localStorage (database is source of truth)')
         localStorage.removeItem('dashboardData')
       }
     } catch (error) {
-      console.error('❌ Error loading home data:', error)
+      console.error('❌ HOME: Error loading home data:', error)
     }
   }
 

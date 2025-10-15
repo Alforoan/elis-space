@@ -180,6 +180,7 @@ def chat_with_eli(
         conversation_history = []
 
         if current_user:
+            print(f"🔐 /api/chat - Authenticated user: {current_user.username} (ID: {current_user.id})")
             recent_entries = db.query(MoodEntry).filter(
                 MoodEntry.user_id == current_user.id
             ).order_by(MoodEntry.created_at.desc()).limit(5).all()
@@ -191,6 +192,8 @@ def chat_with_eli(
                 }
                 for entry in reversed(recent_entries)
             ]
+        else:
+            print(f"👤 /api/chat - Guest user (no auth token)")
 
         eli_response = eli.chat(request.message, conversation_history)
 
@@ -214,6 +217,7 @@ def chat_with_eli(
             db.commit()
             db.refresh(new_entry)
             entry_id = new_entry.id
+            print(f"   Saved entry {entry_id} for user {current_user.id}")
 
         return ChatResponse(
             eli_response=eli_response,
@@ -233,16 +237,20 @@ def get_mood_entries(
     current_user: Optional[User] = Depends(get_current_user)
 ):
     try:
-        cutoff_date = datetime.utcnow() - timedelta(days=days)
-        query = db.query(MoodEntry).filter(MoodEntry.created_at >= cutoff_date)
-
-        # Filter by user_id if authenticated
+        # AUTHENTICATED USERS ONLY: Return their entries from database
         if current_user:
-            query = query.filter(MoodEntry.user_id == current_user.id)
-
-        entries = query.order_by(MoodEntry.created_at.desc()).all()
-
-        return entries
+            print(f"🔐 /api/entries - Authenticated user: {current_user.username} (ID: {current_user.id})")
+            cutoff_date = datetime.utcnow() - timedelta(days=days)
+            entries = db.query(MoodEntry).filter(
+                MoodEntry.user_id == current_user.id,
+                MoodEntry.created_at >= cutoff_date
+            ).order_by(MoodEntry.created_at.desc()).all()
+            print(f"   Returning {len(entries)} entries for user {current_user.id}")
+            return entries
+        else:
+            # GUEST USERS: Return empty list (they use localStorage on frontend)
+            print(f"👤 /api/entries - Guest user (no auth token)")
+            return []
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -253,18 +261,17 @@ def get_today_entries(
     current_user: Optional[User] = Depends(get_current_user)
 ):
     try:
-        today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
-        query = db.query(MoodEntry).filter(
-            MoodEntry.created_at >= today_start
-        )
-
-        # Filter by user_id if authenticated
+        # AUTHENTICATED USERS ONLY: Return their entries from database
         if current_user:
-            query = query.filter(MoodEntry.user_id == current_user.id)
-
-        entries = query.order_by(MoodEntry.created_at.asc()).all()
-
-        return entries
+            today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+            entries = db.query(MoodEntry).filter(
+                MoodEntry.user_id == current_user.id,
+                MoodEntry.created_at >= today_start
+            ).order_by(MoodEntry.created_at.asc()).all()
+            return entries
+        else:
+            # GUEST USERS: Return empty list (they use localStorage on frontend)
+            return []
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -276,23 +283,28 @@ def get_daily_summary(
 ):
     try:
         today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
-        query = db.query(MoodEntry).filter(
-            MoodEntry.created_at >= today_start
-        )
 
-        # Filter by user_id if authenticated
+        # AUTHENTICATED USERS ONLY: Return their summary from database
         if current_user:
-            query = query.filter(MoodEntry.user_id == current_user.id)
+            entries = db.query(MoodEntry).filter(
+                MoodEntry.user_id == current_user.id,
+                MoodEntry.created_at >= today_start
+            ).all()
 
-        entries = query.all()
+            summary = eli.generate_daily_summary(entries)
 
-        summary = eli.generate_daily_summary(entries)
-
-        return {
-            "summary": summary,
-            "entry_count": len(entries),
-            "date": today_start.date().isoformat()
-        }
+            return {
+                "summary": summary,
+                "entry_count": len(entries),
+                "date": today_start.date().isoformat()
+            }
+        else:
+            # GUEST USERS: Return empty summary (they use localStorage on frontend)
+            return {
+                "summary": "",
+                "entry_count": 0,
+                "date": today_start.date().isoformat()
+            }
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -304,30 +316,38 @@ def get_weekly_summary(
 ):
     try:
         week_start = datetime.utcnow() - timedelta(days=7)
-        query = db.query(MoodEntry).filter(
-            MoodEntry.created_at >= week_start
-        )
 
-        # Filter by user_id if authenticated
+        # AUTHENTICATED USERS ONLY: Return their summary from database
         if current_user:
-            query = query.filter(MoodEntry.user_id == current_user.id)
+            entries = db.query(MoodEntry).filter(
+                MoodEntry.user_id == current_user.id,
+                MoodEntry.created_at >= week_start
+            ).all()
 
-        entries = query.all()
+            insights = eli.generate_weekly_insights(entries)
 
-        insights = eli.generate_weekly_insights(entries)
+            positive_count = sum(1 for e in entries if e.sentiment_label == "positive")
+            negative_count = sum(1 for e in entries if e.sentiment_label == "negative")
+            neutral_count = sum(1 for e in entries if e.sentiment_label == "neutral")
 
-        positive_count = sum(1 for e in entries if e.sentiment_label == "positive")
-        negative_count = sum(1 for e in entries if e.sentiment_label == "negative")
-        neutral_count = sum(1 for e in entries if e.sentiment_label == "neutral")
-
-        return {
-            "insights": insights,
-            "entry_count": len(entries),
-            "positive_count": positive_count,
-            "negative_count": negative_count,
-            "neutral_count": neutral_count,
-            "week_start": week_start.date().isoformat()
-        }
+            return {
+                "insights": insights,
+                "entry_count": len(entries),
+                "positive_count": positive_count,
+                "negative_count": negative_count,
+                "neutral_count": neutral_count,
+                "week_start": week_start.date().isoformat()
+            }
+        else:
+            # GUEST USERS: Return empty summary (they use localStorage on frontend)
+            return {
+                "insights": "",
+                "entry_count": 0,
+                "positive_count": 0,
+                "negative_count": 0,
+                "neutral_count": 0,
+                "week_start": week_start.date().isoformat()
+            }
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -412,35 +432,45 @@ def get_stats_overview(
     current_user: Optional[User] = Depends(get_current_user)
 ):
     try:
-        # Build base queries
-        total_query = db.query(MoodEntry)
-        week_start = datetime.utcnow() - timedelta(days=7)
-        week_query = db.query(MoodEntry).filter(MoodEntry.created_at >= week_start)
-        today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
-        today_query = db.query(MoodEntry).filter(MoodEntry.created_at >= today_start)
-
-        # Filter by user_id if authenticated
+        # AUTHENTICATED USERS ONLY: Return their stats from database
         if current_user:
-            total_query = total_query.filter(MoodEntry.user_id == current_user.id)
-            week_query = week_query.filter(MoodEntry.user_id == current_user.id)
-            today_query = today_query.filter(MoodEntry.user_id == current_user.id)
+            week_start = datetime.utcnow() - timedelta(days=7)
+            today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
 
-        total_entries = total_query.count()
-        week_entries = week_query.all()
-        today_entries = today_query.count()
+            total_entries = db.query(MoodEntry).filter(
+                MoodEntry.user_id == current_user.id
+            ).count()
 
-        avg_sentiment = 0.5
-        if week_entries:
-            sentiment_scores = [e.sentiment_score for e in week_entries if e.sentiment_score]
-            if sentiment_scores:
-                avg_sentiment = sum(sentiment_scores) / len(sentiment_scores)
+            week_entries = db.query(MoodEntry).filter(
+                MoodEntry.user_id == current_user.id,
+                MoodEntry.created_at >= week_start
+            ).all()
 
-        return {
-            "total_entries": total_entries,
-            "entries_this_week": len(week_entries),
-            "entries_today": today_entries,
-            "avg_sentiment_this_week": round(avg_sentiment, 2)
-        }
+            today_entries = db.query(MoodEntry).filter(
+                MoodEntry.user_id == current_user.id,
+                MoodEntry.created_at >= today_start
+            ).count()
+
+            avg_sentiment = 0.5
+            if week_entries:
+                sentiment_scores = [e.sentiment_score for e in week_entries if e.sentiment_score]
+                if sentiment_scores:
+                    avg_sentiment = sum(sentiment_scores) / len(sentiment_scores)
+
+            return {
+                "total_entries": total_entries,
+                "entries_this_week": len(week_entries),
+                "entries_today": today_entries,
+                "avg_sentiment_this_week": round(avg_sentiment, 2)
+            }
+        else:
+            # GUEST USERS: Return empty stats (they use localStorage on frontend)
+            return {
+                "total_entries": 0,
+                "entries_this_week": 0,
+                "entries_today": 0,
+                "avg_sentiment_this_week": 0.5
+            }
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

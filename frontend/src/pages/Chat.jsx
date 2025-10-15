@@ -25,8 +25,8 @@ function Chat() {
       const token = localStorage.getItem('token')
 
       if (token) {
-        // AUTHENTICATED USER: Load from database
-        console.log('🔐 Loading chat messages from database')
+        // AUTHENTICATED USER: ALWAYS load from database, NEVER from localStorage
+        console.log('🔐 Authenticated user - loading chat messages from database ONLY')
         const response = await axios.get('/api/entries/today')
         const entries = response.data.map(entry => ({
           user: entry.user_message,
@@ -36,8 +36,8 @@ function Chat() {
         }))
         setMessages(entries)
       } else {
-        // GUEST USER: Load from localStorage
-        console.log('👤 Loading chat messages from localStorage')
+        // GUEST USER: Load from localStorage for temporary storage
+        console.log('👤 Guest user - loading chat messages from localStorage')
         const cachedMessages = localStorage.getItem('chatMessages')
         if (cachedMessages) {
           try {
@@ -45,11 +45,13 @@ function Chat() {
             setMessages(parsed)
           } catch (error) {
             console.error('Error parsing cached messages:', error)
+            setMessages([])
           }
         }
       }
     } catch (error) {
       console.error('Error loading entries:', error)
+      setMessages([])
     }
   }
 
@@ -83,12 +85,12 @@ function Chat() {
           newMessage
         ]
 
-        // GUEST USER: Save to localStorage
+        // GUEST USER ONLY: Save to localStorage for temporary storage
         if (!token) {
-          console.log('👤 Saving chat message to localStorage')
+          console.log('👤 Guest user - saving chat message to localStorage')
           localStorage.setItem('chatMessages', JSON.stringify(updatedMessages))
         } else {
-          console.log('🔐 Chat message saved to database (via API)')
+          console.log('🔐 Authenticated user - message saved to database (via API), NOT to localStorage')
         }
 
         return updatedMessages
@@ -108,8 +110,9 @@ function Chat() {
           errorMessage
         ]
 
-        // GUEST USER: Save error message to localStorage too
+        // GUEST USER ONLY: Save error message to localStorage for temporary storage
         if (!token) {
+          console.log('👤 Guest user - saving error message to localStorage')
           localStorage.setItem('chatMessages', JSON.stringify(updatedMessages))
         }
 

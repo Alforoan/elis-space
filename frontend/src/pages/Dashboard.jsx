@@ -13,22 +13,22 @@ function Dashboard() {
   useEffect(() => {
     const token = localStorage.getItem('token')
 
-    // If authenticated, immediately clear any cached data and DON'T load from cache
     if (token) {
-      console.log('User is authenticated - clearing any cached data, will only load from API')
+      // AUTHENTICATED USER: Clear any cached data, NEVER load from localStorage
+      console.log('🔐 Authenticated user - clearing cached data, will ONLY load from database')
       localStorage.removeItem('dashboardData')
-      // For authenticated users, always show loading while fetching
       setLoading(true)
-      // Don't set any state from cache - only from API
+      // State remains empty until API response arrives from database
     } else {
-      // Only load cached data for guest users (no token)
+      // GUEST USER: Load cached data if available for temporary storage
+      console.log('👤 Guest user - checking for cached data')
       const cachedData = localStorage.getItem('dashboardData')
       if (cachedData) {
         try {
-          console.log('Loading cached guest data')
           const parsed = JSON.parse(cachedData)
-          // Only set state if still not authenticated (double check)
+          // Double check: only use cache if still not authenticated
           if (!localStorage.getItem('token')) {
+            console.log('👤 Loading cached guest data')
             setStats(parsed.stats)
             setEntries(parsed.entries)
             setDailySummary(parsed.dailySummary)
@@ -36,27 +36,27 @@ function Dashboard() {
           }
         } catch (error) {
           console.error('Error loading cached dashboard data:', error)
+          setLoading(true)
         }
       } else {
-        // Only show loading if there's no cached data
         setLoading(true)
       }
     }
 
-    // Fetch fresh data from API (filtered by user_id for authenticated users)
+    // Always fetch fresh data from API (database for authenticated, filtered by user_id)
     loadDashboardData()
   }, [])
 
   const loadDashboardData = async () => {
     try {
-      // Check token status BEFORE making API calls
       const token = localStorage.getItem('token')
 
-      console.log('📊 DASHBOARD: Loading data...', {
+      console.log('📊 DASHBOARD: Loading data from database...', {
         authenticated: !!token,
         timestamp: new Date().toLocaleString()
       })
 
+      // Fetch data from database (backend filters by user_id for authenticated users)
       const [statsRes, entriesRes, dailyRes, weeklyRes] = await Promise.all([
         axios.get('/api/stats/overview'),
         axios.get('/api/entries?days=7'),
@@ -73,27 +73,22 @@ function Dashboard() {
 
       console.log('📊 DASHBOARD: Data received from database:', {
         authenticated: !!token,
-        stats: freshData.stats,
-        entriesCount: freshData.entries.length,
-        entries: freshData.entries,
-        dailySummary: freshData.dailySummary,
-        weeklySummary: freshData.weeklySummary
+        entriesCount: freshData.entries.length
       })
 
-      // Update state with fresh data
+      // Update state with fresh data from database
       setStats(freshData.stats)
       setEntries(freshData.entries)
       setDailySummary(freshData.dailySummary)
       setWeeklySummary(freshData.weeklySummary)
       setLoading(false)
 
-      // Only cache data for guest users (check again to be safe)
+      // GUEST USER ONLY: Cache data to localStorage for temporary storage
       if (!token && !localStorage.getItem('token')) {
-        console.log('💾 DASHBOARD: Caching guest data to localStorage')
+        console.log('💾 Guest user - caching data to localStorage')
         localStorage.setItem('dashboardData', JSON.stringify(freshData))
       } else {
-        console.log('🔐 DASHBOARD: Authenticated user - NOT caching to localStorage')
-        // Ensure no cached data exists for authenticated users
+        console.log('🔐 Authenticated user - NOT caching to localStorage (database is source of truth)')
         localStorage.removeItem('dashboardData')
       }
     } catch (error) {
