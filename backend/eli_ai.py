@@ -28,47 +28,99 @@ class EliAI:
 Your goal is to create a safe space for emotional expression and self-reflection."""
 
     def analyze_sentiment(self, text):
-        """Analyze sentiment using TextBlob for quick analysis"""
+        """Analyze sentiment using OpenAI for more accurate emotional understanding"""
         try:
-            blob = TextBlob(text)
-            polarity = blob.sentiment.polarity
-            
-            if polarity > 0.3:
+            # Use OpenAI to understand emotional tone more accurately
+            prompt = f"""Analyze the emotional sentiment of this message on a scale from -1 (very negative) to 1 (very positive).
+
+Message: "{text}"
+
+Respond with ONLY a JSON object in this exact format:
+{{"score": <number between -1 and 1>, "reasoning": "<brief explanation>"}}
+
+Examples:
+- "Things are going well" -> {{"score": 0.7, "reasoning": "Positive outlook"}}
+- "I'm feeling overwhelmed" -> {{"score": -0.6, "reasoning": "Stressed and struggling"}}
+- "Feeling anxious" -> {{"score": -0.5, "reasoning": "Worried and uneasy"}}
+- "I need someone to talk to" -> {{"score": -0.3, "reasoning": "Seeking support, mild distress"}}"""
+
+            response = self.client.chat.completions.create(
+                model="gpt-4o",
+                messages=[
+                    {"role": "system", "content": "You are an expert at understanding emotional tone and sentiment in text."},
+                    {"role": "user", "content": prompt}
+                ],
+                max_completion_tokens=100,
+                temperature=0.3  # Lower temperature for more consistent results
+            )
+
+            result = json.loads(response.choices[0].message.content)
+            polarity = float(result.get("score", 0))
+
+            # Classify based on polarity
+            if polarity > 0.15:
                 label = "positive"
-            elif polarity < -0.3:
+            elif polarity < -0.15:
                 label = "negative"
             else:
                 label = "neutral"
-            
+
+            # Normalize score to 0-1 range
             score = (polarity + 1) / 2
-            
+
             return {
                 "score": round(score, 2),
                 "label": label,
                 "polarity": round(polarity, 2)
             }
+
         except Exception as e:
-            return {
-                "score": 0.5,
-                "label": "neutral",
-                "polarity": 0.0
-            }
+            # Fallback to TextBlob if OpenAI fails
+            print(f"OpenAI sentiment failed, using TextBlob: {e}")
+            try:
+                blob = TextBlob(text)
+                polarity = blob.sentiment.polarity
+
+                if polarity > 0.05:
+                    label = "positive"
+                elif polarity < -0.05:
+                    label = "negative"
+                else:
+                    label = "neutral"
+
+                score = (polarity + 1) / 2
+
+                return {
+                    "score": round(score, 2),
+                    "label": label,
+                    "polarity": round(polarity, 2)
+                }
+            except:
+                return {
+                    "score": 0.5,
+                    "label": "neutral",
+                    "polarity": 0.0
+                }
 
     def get_mood_tags(self, sentiment_data):
-        """Generate mood tags based on sentiment"""
+        """Generate mood tags based on sentiment with more granular categories"""
         label = sentiment_data.get("label", "neutral")
         polarity = sentiment_data.get("polarity", 0)
-        
+
         if label == "positive":
-            if polarity > 0.6:
-                return "joyful, uplifted"
+            if polarity > 0.7:
+                return "joyful, optimistic"
+            elif polarity > 0.4:
+                return "hopeful, encouraged"
             else:
-                return "content, hopeful"
+                return "content, stable"
         elif label == "negative":
-            if polarity < -0.6:
-                return "distressed, struggling"
+            if polarity < -0.7:
+                return "overwhelmed, distressed"
+            elif polarity < -0.4:
+                return "struggling, anxious"
             else:
-                return "low, challenged"
+                return "uncertain, low"
         else:
             return "calm, reflective"
 
