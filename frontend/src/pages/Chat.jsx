@@ -6,6 +6,7 @@ function Chat() {
   const [messages, setMessages] = useState([])
   const [inputValue, setInputValue] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const [initialLoading, setInitialLoading] = useState(true)
   const messagesEndRef = useRef(null)
 
   const scrollToBottom = () => {
@@ -22,6 +23,7 @@ function Chat() {
 
   const loadRecentEntries = async () => {
     try {
+      setInitialLoading(true)
       const token = localStorage.getItem('token')
 
       if (token) {
@@ -52,6 +54,8 @@ function Chat() {
     } catch (error) {
       console.error('Error loading entries:', error)
       setMessages([])
+    } finally {
+      setInitialLoading(false)
     }
   }
 
@@ -145,7 +149,12 @@ function Chat() {
       </div>
 
       <div className="messages-container">
-        {messages.length === 0 && (
+        {initialLoading ? (
+          <div className="loading-container">
+            <div className="loading-spinner"></div>
+            <p>Loading your conversation...</p>
+          </div>
+        ) : messages.length === 0 ? (
           <div className="welcome-message">
             <h3>Hello, I'm Eli</h3>
             <p>I'm here to support you during your journey. Feel free to share how you're feeling, what's on your mind, or anything you'd like to talk about. There's no judgment here, just a safe space for you.</p>
@@ -162,7 +171,7 @@ function Chat() {
               ))}
             </div>
           </div>
-        )}
+        ) : null}
 
         {messages.map((msg, index) => (
           <div key={index} className="message-group">

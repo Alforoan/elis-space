@@ -10,6 +10,7 @@ function Home({ setActiveTab }) {
   const [entries, setEntries] = useState([])
   const [weeklySummary, setWeeklySummary] = useState(null)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     const token = localStorage.getItem('token')
@@ -57,6 +58,7 @@ function Home({ setActiveTab }) {
 
   const loadHomeData = async () => {
     try {
+      setLoading(true)
       const token = localStorage.getItem('token')
 
       console.log('📡 HOME: Loading data from database...', {
@@ -97,6 +99,8 @@ function Home({ setActiveTab }) {
       }
     } catch (error) {
       console.error('❌ HOME: Error loading home data:', error)
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -163,10 +167,16 @@ function Home({ setActiveTab }) {
       </div>
 
       {/*
-        Authenticated users: Show database data (or "Start Journey" if no data)
-        Guest users: Show localStorage/API data (or "Start Journey" if no data)
+        Loading state -> Show loading indicator
+        Has data -> Show stats and charts
+        No data -> Show "Start Your Journey"
       */}
-      {hasData ? (
+      {loading ? (
+        <div className="loading-container">
+          <div className="loading-spinner"></div>
+          <p>Loading your data...</p>
+        </div>
+      ) : hasData ? (
         <>
           <div className="stats-preview">
             <div className="stat-item">
