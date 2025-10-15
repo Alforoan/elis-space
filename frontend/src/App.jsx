@@ -8,7 +8,7 @@ import Login from './pages/Login'
 import Signup from './pages/Signup'
 import NotificationModal from './components/NotificationModal'
 import './App.css'
-import axios from 'axios'
+import axios from './config/axios'
 
 function AppContent() {
   const location = useLocation()

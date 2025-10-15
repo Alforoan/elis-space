@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
-import axios from 'axios'
+import axios from '../config/axios'
 import '../styles/Chat.css'
 
 function Chat() {
