@@ -2,7 +2,7 @@ from sqlalchemy import create_engine, Column, Integer, String, Text, DateTime, F
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship
 from datetime import datetime
-from passlib.hash import bcrypt
+import bcrypt
 
 SQLALCHEMY_DATABASE_URL = "sqlite:///./mood_tracker.db"
 
@@ -27,10 +27,10 @@ class User(Base):
     settings = relationship("Settings", back_populates="user", uselist=False)
 
     def set_password(self, password: str):
-        self.password_hash = bcrypt.hash(password)
+        self.password_hash = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
 
     def check_password(self, password: str) -> bool:
-        return bcrypt.verify(password, self.password_hash)
+        return bcrypt.checkpw(password.encode('utf-8'), self.password_hash.encode('utf-8'))
 
 class MoodEntry(Base):
     __tablename__ = "mood_entries"
