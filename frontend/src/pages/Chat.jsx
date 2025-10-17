@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react'
 import axios from '../config/axios'
+import SafeModeLockScreen from '../components/SafeModeLockScreen'
 import '../styles/Chat.css'
 
-function Chat() {
+function Chat({ safeMode }) {
   const [messages, setMessages] = useState([])
   const [inputValue, setInputValue] = useState('')
   const [isLoading, setIsLoading] = useState(false)
@@ -18,8 +19,15 @@ function Chat() {
   }, [messages])
 
   useEffect(() => {
+    // Skip data loading if safe mode is active
+    if (safeMode) {
+      console.log('🔒 Safe mode active - skipping chat data load')
+      setInitialLoading(false)
+      return
+    }
+
     loadRecentEntries()
-  }, [])
+  }, [safeMode])
 
   const loadRecentEntries = async () => {
     try {
@@ -143,6 +151,8 @@ function Chat() {
 
   return (
     <div className="chat-container">
+      {safeMode && <SafeModeLockScreen />}
+
       <div className="chat-header">
         <h2>Chat with Eli</h2>
         <p>Share how you're feeling. Eli is here to listen.</p>
@@ -213,7 +223,7 @@ function Chat() {
           rows="3"
           disabled={isLoading}
         />
-        <button 
+        <button
           onClick={handleSendMessage}
           disabled={!inputValue.trim() || isLoading}
           className="send-button"

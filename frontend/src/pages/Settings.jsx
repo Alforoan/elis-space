@@ -161,22 +161,6 @@ function Settings({setActiveTab}) {
       </div>
 
       <div className="settings-section">
-        <h3>Privacy</h3>
-        <div className="setting-item">
-          <div className="setting-info">
-            <label>Privacy Mode</label>
-            <p className="setting-description">Hide sensitive details when app is in background</p>
-          </div>
-          <button 
-            className={`toggle-btn ${settings.privacy_mode ? 'active' : ''}`}
-            onClick={() => handleToggle('privacy_mode')}
-          >
-            {settings.privacy_mode ? 'ON' : 'OFF'}
-          </button>
-        </div>
-      </div>
-
-      <div className="settings-section">
         <h3>About</h3>
         <div className="about-content">
           <p>Eli's Space helps you reflect on and manage your emotions through conversations with Eli, your supportive AI companion.</p>

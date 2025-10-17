@@ -274,6 +274,18 @@
   transform: none;
 }
 
+/* Privacy Mode */
+.privacy-blur {
+  filter: blur(8px);
+  user-select: none;
+  pointer-events: none;
+  transition: filter 0.3s ease;
+}
+
+.privacy-blur:hover {
+  filter: blur(4px);
+}
+
 @media (max-width: 768px) {
   .chat-container {
     padding: 1rem 0.75rem;

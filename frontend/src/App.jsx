@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom'
+import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom'
 import Home from './pages/Home'
 import Chat from './pages/Chat'
 import Dashboard from './pages/Dashboard'
@@ -7,6 +7,7 @@ import Settings from './pages/Settings'
 import Login from './pages/Login'
 import Signup from './pages/Signup'
 import NotificationModal from './components/NotificationModal'
+import ScrollingNavbar from './components/ScrollingNavbar'
 import './App.css'
 import axios from './config/axios'
 
@@ -16,6 +17,7 @@ function AppContent() {
   const [reminderTimer, setReminderTimer] = useState(null)
   const [showNotificationModal, setShowNotificationModal] = useState(false)
   const [user, setUser] = useState(null)
+  const [safeMode, setSafeMode] = useState(false)
 
   // Set active tab based on current URL path
   useEffect(() => {
@@ -101,6 +103,9 @@ function AppContent() {
         const response = await axios.get('/api/settings')
         const settings = response.data
 
+        // Load safe mode state from database
+        setSafeMode(settings.safe_mode || false)
+
         // Clear existing timer
         if (reminderTimer) {
           clearTimeout(reminderTimer)
@@ -136,70 +141,28 @@ function AppContent() {
     }
   }, [])
 
+  const handleLogout = () => {
+    localStorage.removeItem('token')
+    localStorage.removeItem('user')
+    localStorage.removeItem('dashboardData')
+    localStorage.removeItem('chatMessages')
+    window.location.reload()
+  }
+
   return (
     <div className="app">
-      <header className="app-header">
-        <div>
-          <h1>Eli's Space</h1>
-          <p className="tagline">Check in with Eli</p>
-        </div>
-        {user && (
-          <div className="user-info">
-            <span className="username">@{user.username}</span>
-            <button
-              className="logout-btn"
-              onClick={() => {
-                localStorage.removeItem('token')
-                localStorage.removeItem('user')
-                localStorage.removeItem('dashboardData')
-                localStorage.removeItem('chatMessages')
-                window.location.reload()
-              }}
-            >
-              Logout
-            </button>
-          </div>
-        )}
-      </header>
-
-      <nav className="app-nav">
-        <Link
-          to="/"
-          className={activeTab === 'home' ? 'active' : ''}
-          onClick={() => setActiveTab('home')}
-        >
-          Home
-        </Link>
-        <Link
-          to="/chat"
-          className={activeTab === 'chat' ? 'active' : ''}
-          onClick={() => setActiveTab('chat')}
-        >
-          Chat with Eli
-        </Link>
-        <Link
-          to="/dashboard"
-          className={activeTab === 'dashboard' ? 'active' : ''}
-          onClick={() => setActiveTab('dashboard')}
-        >
-          Dashboard
-        </Link>
-        <Link
-          to="/settings"
-          className={activeTab === 'settings' ? 'active' : ''}
-          onClick={() => {
-            setActiveTab('settings')
-          }}
-        >
-          Settings
-        </Link>
-      </nav>
+      <ScrollingNavbar
+        user={user}
+        onLogout={handleLogout}
+        safeMode={safeMode}
+        onSafeModeToggle={setSafeMode}
+      />
 
       <main className="app-main">
         <Routes>
-          <Route path="/" element={<Home setActiveTab={setActiveTab} />} />
-          <Route path="/chat" element={<Chat />} />
-          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/" element={<Home setActiveTab={setActiveTab} safeMode={safeMode} />} />
+          <Route path="/chat" element={<Chat safeMode={safeMode} />} />
+          <Route path="/dashboard" element={<Dashboard safeMode={safeMode} />} />
           <Route path="/settings" element={<Settings setActiveTab={setActiveTab}/>} />
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />

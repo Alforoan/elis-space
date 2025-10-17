@@ -2,9 +2,10 @@ import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import axios from '../config/axios'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
+import SafeModeLockScreen from '../components/SafeModeLockScreen'
 import '../styles/Home.css'
 
-function Home({ setActiveTab }) {
+function Home({ setActiveTab, safeMode }) {
   const navigate = useNavigate()
   const [stats, setStats] = useState(null)
   const [entries, setEntries] = useState([])
@@ -25,6 +26,13 @@ function Home({ setActiveTab }) {
   }
 
   useEffect(() => {
+    // Skip data loading if safe mode is active
+    if (safeMode) {
+      console.log('🔒 Safe mode active - skipping data load')
+      setLoading(false)
+      return
+    }
+
     const token = localStorage.getItem('token')
 
     if (token) {
@@ -54,7 +62,7 @@ function Home({ setActiveTab }) {
 
     // Always fetch fresh data from API (database for authenticated, filtered by user_id)
     loadHomeData()
-  }, [])
+  }, [safeMode])
 
   const loadHomeData = async () => {
     try {
@@ -141,6 +149,8 @@ function Home({ setActiveTab }) {
 
   return (
     <div className="home-container">
+      {safeMode && <SafeModeLockScreen />}
+
       <div className="hero-section">
         <h1 className="hero-title">Welcome to Eli's Space</h1>
         <p className="hero-subtitle">Your personal companion for emotional well-being</p>
@@ -242,14 +252,6 @@ function Home({ setActiveTab }) {
               </div>
             )}
           </div>
-
-          {weeklySummary && weeklySummary.entry_count > 0 && (
-            <div className="insights-card">
-              <h3>This Week's Insights</h3>
-              <p className="insights-text">{weeklySummary.insights}</p>
-              <div className="insights-meta">{weeklySummary.entry_count} check-ins this week</div>
-            </div>
-          )}
         </>
       ) : (
         <div className="welcome-message">

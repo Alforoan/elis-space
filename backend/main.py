@@ -42,14 +42,16 @@ class MoodEntryResponse(BaseModel):
         from_attributes = True
 
 class SettingsRequest(BaseModel):
-    reminder_enabled: bool
-    reminder_time: str
-    privacy_mode: bool
+    reminder_enabled: Optional[bool] = None
+    reminder_time: Optional[str] = None
+    privacy_mode: Optional[bool] = None
+    safe_mode: Optional[bool] = None
 
 class SettingsResponse(BaseModel):
     reminder_enabled: bool
     reminder_time: str
     privacy_mode: bool
+    safe_mode: bool
 
     class Config:
         from_attributes = True
@@ -167,6 +169,22 @@ def login(request: LoginRequest, db: Session = Depends(get_db)):
 @app.get("/api/auth/me", response_model=UserResponse)
 def get_current_user_info(current_user: User = Depends(get_current_user_required)):
     return current_user
+
+class VerifyPasswordRequest(BaseModel):
+    password: str
+
+@app.post("/api/auth/verify-password")
+def verify_password(
+    request: VerifyPasswordRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user_required)
+):
+    """Verify the current user's password (for safe mode unlock)"""
+    try:
+        is_valid = current_user.check_password(request.password)
+        return {"valid": is_valid}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/chat", response_model=ChatResponse)
 def chat_with_eli(
@@ -381,7 +399,8 @@ def get_settings(
         return SettingsResponse(
             reminder_enabled=bool(settings.reminder_enabled),
             reminder_time=settings.reminder_time,
-            privacy_mode=bool(settings.privacy_mode)
+            privacy_mode=bool(settings.privacy_mode),
+            safe_mode=bool(settings.safe_mode)
         )
 
     except Exception as e:
@@ -409,9 +428,15 @@ def update_settings(
                 settings = Settings(user_id=None)
                 db.add(settings)
 
-        settings.reminder_enabled = int(request.reminder_enabled)
-        settings.reminder_time = request.reminder_time
-        settings.privacy_mode = int(request.privacy_mode)
+        # Only update fields that are provided
+        if request.reminder_enabled is not None:
+            settings.reminder_enabled = int(request.reminder_enabled)
+        if request.reminder_time is not None:
+            settings.reminder_time = request.reminder_time
+        if request.privacy_mode is not None:
+            settings.privacy_mode = int(request.privacy_mode)
+        if request.safe_mode is not None:
+            settings.safe_mode = int(request.safe_mode)
         settings.updated_at = datetime.utcnow()
 
         db.commit()
@@ -420,7 +445,8 @@ def update_settings(
         return SettingsResponse(
             reminder_enabled=bool(settings.reminder_enabled),
             reminder_time=settings.reminder_time,
-            privacy_mode=bool(settings.privacy_mode)
+            privacy_mode=bool(settings.privacy_mode),
+            safe_mode=bool(settings.safe_mode)
         )
 
     except Exception as e:

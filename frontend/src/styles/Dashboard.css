@@ -169,6 +169,18 @@
   font-size: 1.05rem;
 }
 
+/* Privacy Mode */
+.privacy-blur {
+  filter: blur(8px);
+  user-select: none;
+  pointer-events: none;
+  transition: filter 0.3s ease;
+}
+
+.privacy-blur:hover {
+  filter: blur(4px);
+}
+
 @media (max-width: 768px) {
   .stats-grid {
     grid-template-columns: repeat(2, 1fr);

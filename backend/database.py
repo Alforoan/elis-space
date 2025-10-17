@@ -55,6 +55,7 @@ class Settings(Base):
     reminder_enabled = Column(Integer, default=1)
     reminder_time = Column(String(10), default="09:00")
     privacy_mode = Column(Integer, default=0)
+    safe_mode = Column(Integer, default=0)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     # Relationships

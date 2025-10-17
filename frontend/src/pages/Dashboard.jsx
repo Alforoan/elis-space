@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react'
 import axios from '../config/axios'
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
+import SafeModeLockScreen from '../components/SafeModeLockScreen'
 import '../styles/Dashboard.css'
 
-function Dashboard() {
+function Dashboard({ safeMode }) {
   const [stats, setStats] = useState(null)
   const [entries, setEntries] = useState([])
   const [dailySummary, setDailySummary] = useState(null)
@@ -11,6 +12,13 @@ function Dashboard() {
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
+    // Skip data loading if safe mode is active
+    if (safeMode) {
+      console.log('🔒 Safe mode active - skipping dashboard data load')
+      setLoading(false)
+      return
+    }
+
     const token = localStorage.getItem('token')
 
     if (token) {
@@ -45,7 +53,7 @@ function Dashboard() {
 
     // Always fetch fresh data from API (database for authenticated, filtered by user_id)
     loadDashboardData()
-  }, [])
+  }, [safeMode])
 
   const loadDashboardData = async () => {
     try {
@@ -143,6 +151,8 @@ function Dashboard() {
 
   return (
     <div className="dashboard-container">
+      {safeMode && <SafeModeLockScreen />}
+
       <div className="dashboard-header">
         <h2>Your Mood Dashboard</h2>
         <p>Tracking your emotional journey</p>
